@@ -1,0 +1,116 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/AWSCommon.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Analytics/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Compute/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Containers/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Database/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Groups/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Storage/all.puml
+
+!theme mars
+
+'skinparam linetype polyline
+skinparam linetype ortho
+
+left to right direction
+
+title "APB Data Analytics Platform Component Diagram"
+
+cloud "Internal" as internalDc {
+
+    database "clicks" as database1
+
+    database "transactions" as database2
+
+}
+
+AWSCloudGroup("ap-northeast-1", "AWS Region 1") {
+
+    AuroraAmazonAuroraInstancealternate("aurora1", "Global Database", "aurora postgresql")
+
+    AuroraPostgreSQLInstance("postgres", "PostgreSQL", "data bridge")
+
+    DatabaseMigrationService("dms0", "DMS", "database migration")
+
+    DatabaseMigrationService("dms1", "DMS", "change data capture")
+
+    DatabaseMigrationService("dms2", "DMS", "archive")
+
+    ElasticContainerService("mlss1", "Machine Learning as a service", "predict")
+
+    EMRCluster("spark0", "EMR Cluster 1", "apache spark")
+
+    EMRCluster("spark1", "EMR Cluster 2", "apache hive & apache spark")
+
+    Lambda("lambda0", "S3 Bucket Sync", "sync models")
+
+    Lambda("lambda1", "S3 Bucket Sync", "sync storage")
+
+    Lambda("lambda2", "Delete archived data", "delete archived data")
+
+    ManagedStreamingforApacheKafka("kafka", "Kafka", "message broker")
+
+    SimpleStorageServiceBucket("s30", "S3", "apb-region_1-data-storage")
+
+    SimpleStorageServiceBucket("s31", "S3", "apb-region_1-ml_models")
+
+}
+
+AWSCloudGroup("us-east-1", "AWS Region 2") {
+
+    AuroraAmazonAuroraInstancealternate("aurora2", "Global Database", "aurora postgresql")
+
+    ElasticContainerService("mlss2", "Machine Learning as a service", "predict")
+
+    EMRCluster("spark2", "EMR Cluster 3", "apache hive & apache spark")
+
+    SimpleStorageServiceBucket("s32", "S3", "apb-region_2-ml_models")
+
+    SimpleStorageServiceBucket("s33", "S3", "apb-region_2-data-storage")
+
+}
+
+database1 --> dms0
+database2 --> dms0
+
+database1 --> dms1
+database2 --> dms1
+
+dms0 --> postgres
+dms1 --> kafka
+
+postgres -> spark0
+kafka --> spark0
+
+spark0 --> aurora1 : etl
+spark1 <- aurora1
+s30 -> spark1
+spark1 --> s31
+
+dms2 <- aurora1
+dms2 --> s30
+lambda2 <- dms2
+lambda2 --> aurora1
+
+aurora1 --> mlss1
+s31 --> mlss1 : get model
+
+lambda1 <- s30
+lambda1 -down-> s33
+s33 -[hidden]up-> lambda1
+
+lambda0 <- s31
+lambda0 --> s32
+
+aurora1 <-down-> aurora2 : sync
+aurora1 <-[hidden]up-> aurora2
+
+aurora2 --> mlss2
+s32 -> mlss2 : get model
+
+s33 -down-> spark2
+spark2 -[hidden]up-> s33
+
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+package "com.apb.data_platform.rs.domain" {
+
+    class PredictionRequest {
+        - modelId : UUID
+        - algorithm : Algorithm
+        - jsonOrSql : String
+    }
+
+    enum Algorithm {
+
+        CLASSIFICATION_LOGISTIC_REGRESSION, CLUSTERING_K_MEANS, RECOMMENDATION_ALS
+    }
+
+}
+
+package "com.apb.data_platform.rs" {
+
+    class PredictionRestController {
+        - predictionService : PredictionService
+
+        + predict(predictionRequest: PredictionRequest): ResponseEntity<ResponseBodyEmitter>
+    }
+
+}
+
+package "com.apb.data_platform.service" {
+
+    class PredictionService {
+        - amazonS3: AmazonS3
+        - sparkSession: SparkSession
+
+
+        + predict(modelId: UUID, algorithm: Algorithm, jsonOrSql: String): Dataset<Row>
+        # listModels(algorithm: Algorithm): Set<Pair<UUID, Model<*>>>
+        # <T extends Model<*>> retrieveModel(modelId: UUID, algorithm: Algorithm): T
+    }
+
+}
+
+PredictionRestController "1" *--> "1" PredictionService
+
+@enduml

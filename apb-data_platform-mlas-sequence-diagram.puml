@@ -1,0 +1,69 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/AWSCommon.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Analytics/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Compute/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Containers/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Database/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/General/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Groups/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Storage/all.puml
+
+title "APB Data Analytics Platform Machine Learning as Service Sequence Diagram"
+
+box "AWS Region (Local)"
+
+participant "User\n$UserIMG()" as user
+
+participant "Aurora Global Database 1\n$AuroraAmazonAuroraInstancealternateIMG()" as aurora0
+
+participant "S3 Bucket (Data Storage)\n$SimpleStorageServiceBucketIMG()" as s30
+
+participant "EMR Cluster\n$EMRClusterIMG()" as spark0 <<apache hive & apache spark>>
+
+participant "S3 Bucket (ML models)\n$SimpleStorageServiceBucketIMG()" as s31
+
+participant "Machine Learning as Service\n$ElasticContainerServiceIMG()" as mlas
+
+end box
+
+activate aurora0
+
+activate s30
+
+activate s31
+
+activate spark0
+
+par
+spark0 -> spark0++ : build model
+
+spark0 -> aurora0 : query
+aurora0 --> spark0
+
+spark0 -> s30 : query
+s30 --> spark0
+
+spark0 -> s31 : save model
+
+deactivate spark0
+
+end
+
+user -> mlas++ : POST json or sql to RESTful API
+
+mlas -> s31 : retrieve model
+s31 --> mlas
+
+alt request body is json
+mlas -> mlas: call embedded spark
+else
+mlas -> aurora0: query
+aurora0 --> mlas
+mlas -> mlas: call embedded spark
+end
+
+return
+
+@enduml

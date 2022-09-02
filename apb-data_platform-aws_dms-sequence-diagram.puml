@@ -1,0 +1,85 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/AWSCommon.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Analytics/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Compute/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Containers/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Database/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Groups/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Storage/all.puml
+
+title "APB Data Analytics Platform Data Migration Sequence Diagram"
+
+box "On-premise"
+
+database "On-premise database" as internalDb
+
+end box
+
+activate internalDb
+
+box "AWS Region (Local)"
+
+participant "DMS 1\n$DatabaseMigrationServiceIMG()" as dms0
+
+participant "RDS\n$AuroraPostgreSQLInstanceIMG()" as postgres
+
+participant "DMS 2\n$DatabaseMigrationServiceIMG()" as dms1
+
+participant "MSK\n$ManagedStreamingforApacheKafkaIMG()" as kafka
+
+participant "EMR Cluster\n$EMRClusterIMG()" as spark0 <<apache spark>>
+
+participant "Aurora Global Database 1\n$AuroraAmazonAuroraInstancealternateIMG()" as aurora0
+
+end box
+
+box "AWS Region (Remote)"
+
+participant "Aurora Global Database 2\n$AuroraAmazonAuroraInstancealternateIMG()" as aurora1
+
+end box
+
+activate postgres
+
+par
+
+internalDb -> dms0++ : read schema & data
+
+dms0 -> postgres
+
+return
+
+end
+
+activate kafka
+
+loop
+
+internalDb -> dms1++ : read db changes
+
+dms1 -> kafka
+
+return
+
+end
+
+activate spark0
+activate aurora0
+activate aurora1
+
+loop
+
+spark0 -> spark0++ : aggregate & transform
+
+kafka -> spark0
+postgres -> spark0
+
+spark0 -> aurora0
+
+aurora0 -> aurora1 : sync
+
+end
+
+@enduml

@@ -1,0 +1,70 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/AWSCommon.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Analytics/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Compute/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Containers/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Database/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Groups/all.puml
+!include https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist/Storage/all.puml
+
+title "APB Data Analytics Platform Data Archiving Sequence Diagram"
+
+box "AWS Region (Local)"
+
+participant "Aurora Global Database 1\n$AuroraAmazonAuroraInstancealternateIMG()" as aurora0
+
+participant "DMS 1\n$DatabaseMigrationServiceIMG()" as dms0
+
+participant "S3 Bucket (Data Storage)\n$SimpleStorageServiceBucketIMG()" as s30
+
+participant "Delete Archived Function\n$LambdaIMG()" as lambda0
+
+participant "Sync Bucket Fucntion\n$LambdaIMG()" as lambda1
+
+end box
+
+box "AWS Region (Remote)"
+
+participant "Aurora Global Database 2\n$AuroraAmazonAuroraInstancealternateIMG()" as aurora1
+
+participant "S3 Bucket (Data Storage)\n$SimpleStorageServiceBucketIMG()" as s31
+
+end box
+
+activate aurora0
+
+activate aurora1
+
+activate s30
+
+activate s31
+
+aurora0 -> dms0++ : read schema & data
+
+dms0 -> s30 : write
+
+dms0 -> lambda0++ : trigger
+
+lambda0 -> aurora0 : delete archived data
+
+return
+
+deactivate dms0
+
+aurora0 -> aurora1 : sync
+
+s30 -> lambda1++ : trigger
+
+lambda1 -> s30 : read delta
+
+s30 --> lambda1
+
+lambda1 -> s31 : write delta
+
+return
+
+
+
+@enduml
